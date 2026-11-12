@@ -1,0 +1,125 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Manage Students{% endblock %}
+
+{% block content %}
+<div class="admin-page-header">
+    <div>
+        <h1 class="admin-page-title">Manage Student Accounts</h1>
+        <p class="admin-page-subtitle">Search registered students, inspect submitted reports and claims, deactivate or manage account roles.</p>
+    </div>
+</div>
+
+<!-- Search Form -->
+<div class="admin-controls-card">
+    <form action="/admin/users" method="GET" class="admin-filter-grid">
+        <div class="filter-field search-flex">
+            <label>Search Students</label>
+            <input type="text" name="q" value="{{ search_query or '' }}" placeholder="Search by name or email address...">
+        </div>
+
+        <div class="filter-buttons">
+            <button type="submit" class="btn lost-btn btn-sm">Search</button>
+            {% if search_query %}
+            <a href="/admin/users" class="admin-clear-link">Clear</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Users Table -->
+<div class="admin-card-panel">
+    <div class="panel-header-row">
+        <div>
+            <h3>Registered Student Directory ({{ users|length }} accounts)</h3>
+        </div>
+    </div>
+
+    {% if users %}
+    <div class="table-responsive">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Student Name</th>
+                    <th>College Email</th>
+                    <th>Role</th>
+                    <th>Account Status</th>
+                    <th>Activity</th>
+                    <th>Registered</th>
+                    <th>Admin Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr class="{% if not u['is_active'] %}row-deactivated{% endif %}">
+                    <td><strong>#{{ u['id'] }}</strong></td>
+                    <td>
+                        <strong>{{ u['name'] }}</strong>
+                        {% if u['id'] == session.get('user_id') %}
+                        <span class="badge-you">(You)</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ u['email'] }}</td>
+                    <td>
+                        {% if u['is_admin'] %}
+                        <span class="role-badge role-admin">🛡️ Admin</span>
+                        {% else %}
+                        <span class="role-badge role-student">🎓 Student</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if u['is_active'] %}
+                        <span class="badge-status-active">Active</span>
+                        {% else %}
+                        <span class="badge-status-inactive">Deactivated</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="/admin/users/{{ u['id'] }}" class="activity-link" title="Click to view full activity">
+                            📦 {{ u['item_count'] }} reports | 📑 {{ u['claim_count'] }} claims
+                        </a>
+                    </td>
+                    <td>{{ u['created_at'][:10] }}</td>
+                    <td>
+                        <div class="admin-actions-cell">
+                            <!-- View Activity Details -->
+                            <a href="/admin/users/{{ u['id'] }}" class="btn-action-sm btn-view-sm" title="View Student Activity">
+                                👁 View
+                            </a>
+
+                            {% if u['id'] != session.get('user_id') %}
+                                <!-- Deactivate / Activate Account -->
+                                <form action="/admin/users/{{ u['id'] }}/toggle-status" method="POST" style="display:inline;" onsubmit="return confirm('{% if u['is_active'] %}Deactivate account for {{ u['name'] }}? They will not be able to log in.{% else %}Reactivate account for {{ u['name'] }}?{% endif %}');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    {% if u['is_active'] %}
+                                    <button type="submit" class="btn-action-sm btn-deactivate-sm" title="Deactivate Account">Deactivate</button>
+                                    {% else %}
+                                    <button type="submit" class="btn-action-sm btn-activate-sm" title="Reactivate Account">Activate</button>
+                                    {% endif %}
+                                </form>
+
+                                <!-- Toggle Role -->
+                                <form action="/admin/users/{{ u['id'] }}/toggle-admin" method="POST" style="display:inline;" onsubmit="return confirm('{% if u['is_admin'] %}Demote this user to regular student?{% else %}Grant Administrator privileges to {{ u['name'] }}?{% endif %}');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    {% if u['is_admin'] %}
+                                    <button type="submit" class="btn-action-sm btn-reopen-sm" title="Demote to Student">Demote</button>
+                                    {% else %}
+                                    <button type="submit" class="btn-action-sm btn-resolve-sm" title="Make Admin">Make Admin</button>
+                                    {% endif %}
+                                </form>
+                            {% else %}
+                                <span class="table-sub">Active Session</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="admin-empty">No student accounts matched your search.</p>
+    {% endif %}
+</div>
+{% endblock %}

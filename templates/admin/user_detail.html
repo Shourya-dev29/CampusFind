@@ -1,0 +1,153 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Student Activity: {{ user['name'] }}{% endblock %}
+
+{% block content %}
+<div class="admin-page-header">
+    <a href="/admin/users" class="admin-back-link">← Back to All Students</a>
+    <div>
+        <h1 class="admin-page-title">{{ user['name'] }}</h1>
+        <p class="admin-page-subtitle">College Email: <strong>{{ user['email'] }}</strong> | Member since {{ user['created_at'][:10] }}</p>
+    </div>
+</div>
+
+<!-- Student Profile Status Card -->
+<div class="admin-profile-card">
+    <div class="profile-meta-grid">
+        <div>
+            <span class="meta-label">Account Role</span>
+            <div>
+                {% if user['is_admin'] %}
+                <span class="role-badge role-admin">🛡️ Administrator</span>
+                {% else %}
+                <span class="role-badge role-student">🎓 Student</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div>
+            <span class="meta-label">Account Status</span>
+            <div>
+                {% if user['is_active'] %}
+                <span class="badge-status-active">Active</span>
+                {% else %}
+                <span class="badge-status-inactive">Deactivated</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div>
+            <span class="meta-label">Total Reports</span>
+            <div class="profile-stat-count">{{ user_items|length }}</div>
+        </div>
+
+        <div>
+            <span class="meta-label">Total Claims Submitted</span>
+            <div class="profile-stat-count">{{ user_claims|length }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 1: Items Submitted by this Student -->
+<div class="admin-card-panel">
+    <div class="panel-header-row">
+        <div>
+            <h3>Reports Submitted by {{ user['name'] }} ({{ user_items|length }})</h3>
+        </div>
+    </div>
+
+    {% if user_items %}
+    <div class="table-responsive">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Item ID</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Location</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in user_items %}
+                <tr>
+                    <td><strong>#{{ item['id'] }}</strong></td>
+                    <td>
+                        <strong>{{ item['name'] }}</strong>
+                        <div class="table-desc">{{ item['description'][:60] }}...</div>
+                    </td>
+                    <td>
+                        <span class="item-badge-sm badge-{{ item['report_type'] }}">
+                            {{ item['report_type']|title }}
+                        </span>
+                    </td>
+                    <td>{{ item['category'] }}</td>
+                    <td>📍 {{ item['location'] }}</td>
+                    <td>{{ item['item_date'] }}</td>
+                    <td>
+                        <span class="item-status status-{{ item['status']|lower }}">
+                            {{ item['status'] }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="admin-empty">This student has not submitted any lost or found reports.</p>
+    {% endif %}
+</div>
+
+<!-- Section 2: Claims Submitted by this Student -->
+<div class="admin-card-panel">
+    <div class="panel-header-row">
+        <div>
+            <h3>Ownership Claims Submitted by {{ user['name'] }} ({{ user_claims|length }})</h3>
+        </div>
+    </div>
+
+    {% if user_claims %}
+    <div class="table-responsive">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Claim ID</th>
+                    <th>Item Claimed</th>
+                    <th>Proof Provided</th>
+                    <th>Contact Info</th>
+                    <th>Claim Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for claim in user_claims %}
+                <tr>
+                    <td><strong>#{{ claim['id'] }}</strong></td>
+                    <td>
+                        <strong>{{ claim['item_name'] }}</strong>
+                        <div class="table-sub">📍 {{ claim['item_location'] }}</div>
+                    </td>
+                    <td>
+                        <div class="claim-proof-box">
+                            {{ claim['claim_reason'] }}
+                        </div>
+                    </td>
+                    <td>{{ claim['contact_info'] }}</td>
+                    <td>
+                        <span class="claim-status status-{{ claim['status']|lower }}">
+                            {{ claim['status'] }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="admin-empty">This student has not submitted any ownership claims.</p>
+    {% endif %}
+</div>
+{% endblock %}
+

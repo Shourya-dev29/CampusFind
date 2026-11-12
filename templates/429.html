@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Too Many Requests | CampusFind</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav>
+        <div class="logo">CampusFind.</div>
+        <div class="menu-toggle" onclick="toggleMenu()">
+            <span></span><span></span><span></span>
+        </div>
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="/login">Log In</a>
+            <a href="/register">Register</a>
+            <a href="/report/lost" class="btn lost-btn">Report Item</a>
+        </div>
+    </nav>
+
+    <section class="container" style="max-width: 600px; margin: 80px auto; text-align: center; padding: 0 20px;">
+        <div style="background: #ffffff; border-radius: 16px; padding: 48px 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+            <div style="font-size: 4rem; line-height: 1; margin-bottom: 12px;">⏳</div>
+            <span style="display: inline-block; background: #fee2e2; color: #dc2626; font-weight: 700; font-size: 0.85rem; padding: 4px 12px; border-radius: 20px; margin-bottom: 16px;">Error 429: Rate Limit Exceeded</span>
+            <h1 style="font-size: 1.8rem; font-weight: 800; color: #0f172a; margin-bottom: 12px;">Too Many Attempts</h1>
+            <p style="color: #64748b; font-size: 1rem; line-height: 1.6; margin-bottom: 28px;">
+                You have made too many consecutive attempts in a short period. To protect campus accounts against unauthorized access, requests from your IP address are temporarily limited. Please wait a minute before trying again.
+            </p>
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                <a href="/" class="btn found-btn">← Back to Home</a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-bottom">
+            <p>&copy; 2026 CampusFind. Built for campus safety and student community.</p>
+        </div>
+    </footer>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

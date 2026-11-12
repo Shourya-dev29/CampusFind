@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administrator Login | CampusFind</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="admin-login-body">
+
+    <div class="admin-login-wrapper">
+
+        <div class="form-card auth-card admin-auth-card">
+
+            <div class="admin-login-header">
+                <span class="logo">CampusFind.</span>
+                <span class="admin-badge-pill">🛡️ Admin Portal</span>
+            </div>
+
+            <h2 class="section-title">Authorized Access</h2>
+            <p class="auth-subtitle">Sign in with verified administrator credentials.</p>
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                        <div class="flash-msg flash-msg-error">⚠️ {{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+
+            <form action="{{ url_for('admin_login') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+                {% if next %}
+                <input type="hidden" name="next" value="{{ next }}">
+                {% endif %}
+
+                <div class="form-group">
+                    <label for="email">Administrator Email</label>
+                    <input type="email" id="email" name="email" value="{{ email or '' }}"
+                           placeholder="admin@college.edu" required autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Administrator Password</label>
+                    <input type="password" id="password" name="password"
+                           placeholder="••••••••••••" required>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn lost-btn btn-block">
+                        Sign In to Admin Console
+                    </button>
+                </div>
+
+                <div class="admin-login-footer-links">
+                    <a href="/">← Return to Public Student Portal</a>
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</body>
+</html>
+

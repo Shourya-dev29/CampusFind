@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard | CampusFind</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <nav>
+        <div class="logo">CampusFind.</div>
+
+        <div class="menu-toggle" onclick="toggleMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="/notifications" class="nav-bell-link" title="Notifications">
+                🔔
+                {% if unread_notifications_count and unread_notifications_count > 0 %}
+                <span class="bell-badge">{{ unread_notifications_count }}</span>
+                {% endif %}
+            </a>
+            <a href="/report/lost">Report Lost</a>
+            <a href="/report/found">Report Found</a>
+            <a href="/logout" class="btn found-btn">Log Out</a>
+        </div>
+    </nav>
+
+    <section class="container dashboard-container">
+
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <div>
+                <h1 class="dashboard-title">Student Dashboard</h1>
+                <p class="dashboard-subtitle">
+                    Logged in as <strong>{{ session.get('user_name') }}</strong> ({{ session.get('user_email') }})
+                </p>
+            </div>
+            <div class="dashboard-actions">
+                <a href="/report/lost" class="btn lost-btn">+ Report Lost</a>
+                <a href="/report/found" class="btn found-btn">+ Report Found</a>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div class="flash-messages">
+                {% for message in messages %}
+                    <div class="flash-msg">📢 {{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- SECTION 0: Recent Notifications Widget (Phase 5) -->
+        <div class="dashboard-section notif-widget-section">
+            <div class="section-header-row">
+                <h2 class="dashboard-section-title">
+                    🔔 Recent Notifications
+                    {% if unread_notifications_count and unread_notifications_count > 0 %}
+                    <span class="unread-pill">{{ unread_notifications_count }} Unread</span>
+                    {% endif %}
+                </h2>
+                <a href="/notifications" class="section-link">View All Notifications →</a>
+            </div>
+
+            {% if recent_notifications %}
+            <div class="dash-notif-list">
+                {% for n in recent_notifications %}
+                <div class="dash-notif-item {% if not n['is_read'] %}dash-notif-unread{% endif %}">
+                    <span class="notif-badge-icon type-{{ n['notification_type'] }}">
+                        {% if n['notification_type'] == 'claim_received' %}📥
+                        {% elif n['notification_type'] == 'claim_approved' %}✅
+                        {% elif n['notification_type'] == 'claim_rejected' %}❌
+                        {% elif n['notification_type'] == 'item_resolved' %}🎯
+                        {% else %}🔔
+                        {% endif %}
+                    </span>
+                    <div class="dash-notif-body">
+                        <div class="dash-notif-header">
+                            <strong class="dash-notif-title">{{ n['title'] }}</strong>
+                            <span class="notif-time">{{ n['created_at'][:16] }}</span>
+                        </div>
+                        <p class="dash-notif-text">{{ n['message'] }}</p>
+                        {% if n['related_item_id'] %}
+                        <a href="{{ url_for('item_detail', item_id=n['related_item_id']) }}" class="dash-notif-item-link">
+                            View Item {% if n['item_name'] %}({{ n['item_name'] }}){% endif %} →
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% if not n['is_read'] %}
+                    <form action="{{ url_for('mark_notification_read', notification_id=n['id']) }}?next=/dashboard" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="btn-mark-read btn-sm" title="Mark as read">✓ Read</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="empty-state">No new notifications. You're all caught up! 🎉</p>
+            {% endif %}
+        </div>
+
+        <!-- SECTION 1: Incoming Claims on Items I Found -->
+        <div class="dashboard-section">
+            <div class="section-header-row">
+                <h2 class="dashboard-section-title">
+                    📥 Claims on Items You Found ({{ incoming_claims|length }})
+                </h2>
+                <span class="section-tag">Requires your review</span>
+            </div>
+
+            {% if incoming_claims %}
+            <div class="claims-list">
+                {% for claim in incoming_claims %}
+                <div class="claim-card-box">
+                    <div class="claim-header">
+                        <div class="claim-item-meta">
+                            <strong>{{ claim['item_name'] }}</strong>
+                            <span class="claim-status status-{{ claim['status']|lower }}">
+                                Status: {{ claim['status'] }}
+                            </span>
+                        </div>
+                        <span class="claim-date">{{ claim['created_at'][:10] }}</span>
+                    </div>
+
+                    <div class="claim-body">
+                        <p><strong>Claimant:</strong> {{ claim['claimant_name'] }} ({{ claim['claimant_email'] }})</p>
+                        <p><strong>Contact Info:</strong> {{ claim['contact_info'] }}</p>
+                        <p class="claim-reason-box">
+                            <strong>Proof / Details:</strong><br>
+                            {{ claim['claim_reason'] }}
+                        </p>
+                    </div>
+
+                    {% if claim['status'] == 'Pending' %}
+                    <div class="claim-actions">
+                        <form action="{{ url_for('handle_claim_action', claim_id=claim['id'], action='approve') }}" method="POST" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="btn-action btn-approve" onclick="return confirm('Approve this claim? The item will be marked as Resolved.')">
+                                ✔ Approve Claim
+                            </button>
+                        </form>
+                        <form action="{{ url_for('handle_claim_action', claim_id=claim['id'], action='reject') }}" method="POST" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="btn-action btn-reject" onclick="return confirm('Reject this claim request?')">
+                                ✖ Reject Claim
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="dashboard-empty-card">
+                <p>No claims have been submitted on your found items yet.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- SECTION 2: My Claims Tracked -->
+        <div class="dashboard-section">
+            <h2 class="dashboard-section-title">
+                🔍 Claims You Have Submitted ({{ my_claims|length }})
+            </h2>
+
+            {% if my_claims %}
+            <div class="claims-grid">
+                {% for claim in my_claims %}
+                <div class="my-claim-card">
+                    <div class="my-claim-top">
+                        <div>
+                            <h4>{{ claim['item_name'] }}</h4>
+                            <p class="my-claim-loc">📍 {{ claim['item_location'] }} | 📁 {{ claim['item_category'] }}</p>
+                        </div>
+                        <span class="claim-status status-{{ claim['status']|lower }}">
+                            {{ claim['status'] }}
+                        </span>
+                    </div>
+
+                    <div class="my-claim-details">
+                        <p><strong>Your proof provided:</strong> {{ claim['claim_reason'][:120] }}{% if claim['claim_reason']|length > 120 %}...{% endif %}</p>
+                        <p><strong>Submitted on:</strong> {{ claim['created_at'][:10] }}</p>
+                    </div>
+
+                    <div class="my-claim-footer">
+                        <a href="{{ url_for('item_detail', item_id=claim['item_id']) }}" class="btn-link">
+                            View Item →
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="dashboard-empty-card">
+                <p>You haven't submitted any claims yet. Found something belonging to you? Browse recent reports to submit a claim.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- SECTION 3: My Reported Items -->
+        <div class="dashboard-section">
+            <div class="section-header-row">
+                <h2 class="dashboard-section-title">
+                    📋 Items You Reported ({{ my_items|length }})
+                </h2>
+                <div>
+                    <a href="/report/lost" class="btn-link">+ Report Lost</a> |
+                    <a href="/report/found" class="btn-link">+ Report Found</a>
+                </div>
+            </div>
+
+            {% if my_items %}
+            <div class="items-grid">
+                {% for item in my_items %}
+                <div class="item-card">
+                    <div class="item-card-image">
+                        {% if item['photo'] %}
+                        <img src="{{ url_for('static', filename='uploads/' + item['photo']) }}" alt="{{ item['name'] }}">
+                        {% else %}
+                        <div class="item-card-placeholder">📦</div>
+                        {% endif %}
+
+                        <span class="item-badge badge-{{ item['report_type'] }}">
+                            {{ item['report_type']|title }}
+                        </span>
+                    </div>
+
+                    <div class="item-card-body">
+                        <h3 class="item-card-title">{{ item['name'] }}</h3>
+                        <p class="item-card-desc">
+                            {{ item['description'][:100] }}{% if item['description']|length > 100 %}…{% endif %}
+                        </p>
+
+                        <div class="item-card-meta">
+                            <span>📍 {{ item['location'] }}</span>
+                            <span>📅 {{ item['item_date'] }}</span>
+                            <span>📁 {{ item['category'] }}</span>
+                        </div>
+
+                        <div class="item-card-footer">
+                            <span class="item-status status-{{ item['status']|lower }}">
+                                {{ item['status'] }}
+                            </span>
+                            <a href="{{ url_for('item_detail', item_id=item['id']) }}" class="item-contact">
+                                View Details →
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="dashboard-empty-card">
+                <p>You haven't reported any lost or found items yet.</p>
+            </div>
+            {% endif %}
+        </div>
+
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-brand">
+                <div class="logo">CampusFind.</div>
+                <p>A smarter way to find your lost belongings around your college campus.</p>
+            </div>
+
+            <div class="footer-links">
+                <div class="footer-links-col">
+                    <h4>Quick Links</h4>
+                    <a href="/">Home</a>
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/#reports">Recent Reports</a>
+                </div>
+                <div class="footer-links-col">
+                    <h4>Report</h4>
+                    <a href="/report/lost">Report Lost Item</a>
+                    <a href="/report/found">Report Found Item</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>&copy; 2026 CampusFind | Built for Students, By Students.</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
+

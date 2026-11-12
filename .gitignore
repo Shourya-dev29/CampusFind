@@ -1,0 +1,43 @@
+# ==============================================================
+# CampusFind - Git Ignore Rules
+# ==============================================================
+
+# Environment & Private Secrets
+.env
+.env.local
+.env.*.local
+
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environments
+venv/
+env/
+.venv/
+ENV/
+
+# SQLite Database Files & Backups (Preserve folder via .gitkeep)
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.sqlite3-journal
+*.tmp
+*.bak
+*.swp
+!database/.gitkeep
+
+# User Uploaded Photos (Preserve folder via .gitkeep)
+static/uploads/*
+!static/uploads/.gitkeep
+
+# IDE & Editor Configurations
+.vscode/
+.idea/
+
+# OS Generated Files
+.DS_Store
+Thumbs.db

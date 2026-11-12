@@ -1,0 +1,28 @@
+# ==============================================================
+# CampusFind - Environment Configuration Template
+# Copy this file to '.env' and fill in values for your environment.
+# NEVER commit the actual '.env' file with secrets to Git!
+# ==============================================================
+
+# Application Environment: 'development' or 'production'
+CAMPUSFIND_ENV=development
+
+# Security: Secret key for signing session cookies and CSRF tokens.
+# REQUIRED in production. Generate with: python -c "import secrets; print(secrets.token_hex(32))"
+SECRET_KEY=change-this-to-a-strong-random-64-character-hex-key-in-production
+
+# Cookie Security: Set to 'true' in production HTTPS; 'false' for local HTTP development.
+SESSION_COOKIE_SECURE=false
+
+# SQLite Database File Path: Persistent path on disk or volume mount.
+DATABASE_PATH=database/campusfind.db
+
+# Upload Folder: Persistent storage for uploaded item photographs.
+UPLOAD_FOLDER=static/uploads
+
+# Rate Limiter Storage: 'memory://' for single instance, or 'redis://localhost:6379' for clusters.
+RATELIMIT_STORAGE_URI=memory://
+
+# Reverse Proxy / Trusted Proxy: Set to 'true' if running behind Nginx, Caddy, or Cloudflare.
+BEHIND_PROXY=false
+

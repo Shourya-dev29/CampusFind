@@ -1,0 +1,166 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Manage Item Reports{% endblock %}
+
+{% block content %}
+<div class="admin-page-header">
+    <div>
+        <h1 class="admin-page-title">Manage Campus Item Reports</h1>
+        <p class="admin-page-subtitle">Search, filter, update statuses, archive, or remove lost and found records.</p>
+    </div>
+</div>
+
+<!-- Search & Filter Controls -->
+<div class="admin-controls-card">
+    <form action="/admin/items" method="GET" class="admin-filter-grid">
+        <div class="filter-field search-flex">
+            <label>Search Reports</label>
+            <input type="text" name="q" value="{{ search_query or '' }}" placeholder="Search by name, description, location...">
+        </div>
+
+        <div class="filter-field">
+            <label>Report Type</label>
+            <select name="type">
+                <option value="">All Types (Lost &amp; Found)</option>
+                <option value="lost" {% if filter_type == 'lost' %}selected{% endif %}>Lost Items</option>
+                <option value="found" {% if filter_type == 'found' %}selected{% endif %}>Found Items</option>
+            </select>
+        </div>
+
+        <div class="filter-field">
+            <label>Category</label>
+            <select name="category">
+                <option value="">All Categories</option>
+                <option value="Electronics" {% if filter_category == 'Electronics' %}selected{% endif %}>Electronics</option>
+                <option value="Bags" {% if filter_category == 'Bags' %}selected{% endif %}>Bags</option>
+                <option value="Wallets" {% if filter_category == 'Wallets' %}selected{% endif %}>Wallets</option>
+                <option value="ID Cards" {% if filter_category == 'ID Cards' %}selected{% endif %}>ID Cards</option>
+                <option value="Books" {% if filter_category == 'Books' %}selected{% endif %}>Books</option>
+                <option value="Other" {% if filter_category == 'Other' %}selected{% endif %}>Other</option>
+            </select>
+        </div>
+
+        <div class="filter-field">
+            <label>Status</label>
+            <select name="status">
+                <option value="">All Statuses</option>
+                <option value="Active" {% if filter_status == 'Active' %}selected{% endif %}>Active Only</option>
+                <option value="Open" {% if filter_status == 'Open' %}selected{% endif %}>Open</option>
+                <option value="Resolved" {% if filter_status == 'Resolved' %}selected{% endif %}>Resolved</option>
+                <option value="Archived" {% if filter_status == 'Archived' %}selected{% endif %}>Archived / Hidden</option>
+            </select>
+        </div>
+
+        <div class="filter-buttons">
+            <button type="submit" class="btn lost-btn btn-sm">Filter</button>
+            {% if search_query or filter_type or filter_category or filter_status %}
+            <a href="/admin/items" class="admin-clear-link">Reset</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Master Items Table -->
+<div class="admin-card-panel">
+    <div class="panel-header-row">
+        <div>
+            <h3>Reports Catalog ({{ items|length }} records)</h3>
+        </div>
+    </div>
+
+    {% if items %}
+    <div class="table-responsive">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Image</th>
+                    <th>Item Details</th>
+                    <th>Type</th>
+                    <th>Reporter</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr class="{% if item['is_archived'] %}row-archived{% endif %}">
+                    <td><strong>#{{ item['id'] }}</strong></td>
+                    <td>
+                        {% if item['photo'] %}
+                        <img src="{{ url_for('static', filename='uploads/' + item['photo']) }}" alt="{{ item['name'] }}" class="table-thumb">
+                        {% else %}
+                        <div class="table-thumb-placeholder">📦</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="item-title-row">
+                            <strong>{{ item['name'] }}</strong>
+                            {% if item['is_archived'] %}
+                            <span class="badge-archived">Archived</span>
+                            {% endif %}
+                        </div>
+                        <div class="table-sub">
+                            📁 {{ item['category'] }} | 📍 {{ item['location'] }} | 📅 {{ item['item_date'] }}
+                        </div>
+                        <div class="table-desc">{{ item['description'] }}</div>
+                        <div class="item-view-link">
+                            <a href="{{ url_for('item_detail', item_id=item['id']) }}" target="_blank">View Public Page ↗</a>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="item-badge-sm badge-{{ item['report_type'] }}">
+                            {{ item['report_type']|title }}
+                        </span>
+                    </td>
+                    <td>
+                        <div><strong>{{ item['reporter_name'] or 'Guest User' }}</strong></div>
+                        <div class="table-sub">{{ item['email'] }}</div>
+                    </td>
+                    <td>
+                        <span class="item-status status-{{ item['status']|lower }}">
+                            {{ item['status'] }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="admin-actions-cell">
+                            <!-- Toggle Status: Open / Resolved -->
+                            {% if item['status'] == 'Open' %}
+                            <form action="/admin/items/{{ item['id'] }}/status/Resolved" method="POST" style="display:inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <button type="submit" class="btn-action-sm btn-resolve-sm" title="Mark Resolved">✔ Resolve</button>
+                            </form>
+                            {% else %}
+                            <form action="/admin/items/{{ item['id'] }}/status/Open" method="POST" style="display:inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <button type="submit" class="btn-action-sm btn-reopen-sm" title="Reopen Report">↺ Reopen</button>
+                            </form>
+                            {% endif %}
+
+                            <!-- Archive (Soft-delete) -->
+                            <form action="/admin/items/{{ item['id'] }}/archive" method="POST" style="display:inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                {% if item['is_archived'] %}
+                                <button type="submit" class="btn-action-sm btn-unarchive-sm" title="Restore to public view">Unarchive</button>
+                                {% else %}
+                                <button type="submit" class="btn-action-sm btn-archive-sm" title="Archive (Hide from public, preserve data)">Archive</button>
+                                {% endif %}
+                            </form>
+
+                            <!-- Permanent Delete -->
+                            <form action="/admin/items/{{ item['id'] }}/delete" method="POST" style="display:inline;" onsubmit="return confirm('Permanently remove item #{{ item['id'] }} and any linked claims? This cannot be undone.');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <button type="submit" class="btn-action-sm btn-delete-sm" title="Permanently Delete">🗑 Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="admin-empty">No reports match the selected filters.</p>
+    {% endif %}
+</div>
+{% endblock %}

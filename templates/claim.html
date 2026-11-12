@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claim Item: {{ item['name'] }} | CampusFind</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <nav>
+        <div class="logo">CampusFind.</div>
+
+        <div class="menu-toggle" onclick="toggleMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="/notifications" class="nav-bell-link" title="Notifications">
+                🔔
+                {% if unread_notifications_count and unread_notifications_count > 0 %}
+                <span class="bell-badge">{{ unread_notifications_count }}</span>
+                {% endif %}
+            </a>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/logout">Logout</a>
+        </div>
+    </nav>
+
+    <section class="container">
+
+        <div class="form-card claim-card">
+
+            <a href="{{ url_for('item_detail', item_id=item['id']) }}" class="back-link">← Back to Item Details</a>
+
+            <h2 class="section-title">Submit Ownership Claim</h2>
+            <p class="auth-subtitle">
+                You are claiming: <strong>{{ item['name'] }}</strong> (Found at {{ item['location'] }} on {{ item['item_date'] }})
+            </p>
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                        <div class="flash-msg flash-msg-error">⚠️ {{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Item Mini Summary -->
+            <div class="claim-item-summary">
+                {% if item['photo'] %}
+                <img src="{{ url_for('static', filename='uploads/' + item['photo']) }}" alt="{{ item['name'] }}">
+                {% else %}
+                <div class="claim-summary-placeholder">📦</div>
+                {% endif %}
+                <div>
+                    <h4>{{ item['name'] }}</h4>
+                    <p><strong>Category:</strong> {{ item['category'] }}</p>
+                    <p><strong>Found Location:</strong> {{ item['location'] }}</p>
+                    <p><strong>Date:</strong> {{ item['item_date'] }}</p>
+                </div>
+            </div>
+
+            <form action="{{ url_for('claim_item', item_id=item['id']) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+                <div class="form-group">
+                    <label for="claim_reason">Proof of Ownership / Distinguishing Details</label>
+                    <p class="form-help">
+                        Describe specific identifying details not obvious in the photos (e.g. wallpaper, contents inside, unique scratch, brand, ID number).
+                    </p>
+                    <textarea id="claim_reason" name="claim_reason" rows="4"
+                              placeholder="Provide specific details proving this belongs to you..." required>{{ claim_reason or '' }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="contact_info">Your Contact Details</label>
+                    <p class="form-help">How the reporter can contact you to coordinate returning the item.</p>
+                    <input type="text" id="contact_info" name="contact_info"
+                           placeholder="e.g. Phone number, hostel room, or alternate email"
+                           value="{{ contact_info or session.get('user_email', '') }}" required>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn lost-btn btn-block">
+                        Submit Claim Request
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-brand">
+                <div class="logo">CampusFind.</div>
+                <p>A smarter way to find your lost belongings around your college campus.</p>
+            </div>
+
+            <div class="footer-links">
+                <div class="footer-links-col">
+                    <h4>Quick Links</h4>
+                    <a href="/">Home</a>
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/#reports">Recent Reports</a>
+                </div>
+                <div class="footer-links-col">
+                    <h4>Report</h4>
+                    <a href="/report/lost">Report Lost Item</a>
+                    <a href="/report/found">Report Found Item</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>&copy; 2026 CampusFind | Built for Students, By Students.</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
+

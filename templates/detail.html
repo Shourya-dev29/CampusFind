@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ item['name'] }} | CampusFind</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <nav>
+        <div class="logo">CampusFind.</div>
+
+        <div class="menu-toggle" onclick="toggleMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+
+        <div class="nav-links">
+            <a href="/">← Back to Home</a>
+            {% if session.get('user_id') %}
+            <a href="/notifications" class="nav-bell-link" title="Notifications">
+                🔔
+                {% if unread_notifications_count and unread_notifications_count > 0 %}
+                <span class="bell-badge">{{ unread_notifications_count }}</span>
+                {% endif %}
+            </a>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/logout">Log Out</a>
+            {% else %}
+            <a href="/login">Log In</a>
+            <a href="/register">Register</a>
+            {% endif %}
+            <a href="/report/lost" class="btn lost-btn">Report Item</a>
+        </div>
+    </nav>
+
+    <section class="container detail-container">
+
+        <div class="detail-nav-bar">
+            <a href="/" class="back-link">← Back to All Reports</a>
+            <span class="report-id-pill">Report #{{ item['id'] }}</span>
+        </div>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div class="flash-messages">
+                {% for message in messages %}
+                    <div class="flash-msg">📢 {{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="detail-card enhanced-detail-card">
+
+            <!-- Left: Large Photo / Visual Preview -->
+            <div class="detail-image-box enhanced-image-box">
+                {% if item['photo'] %}
+                <div class="detail-img-wrapper">
+                    <a href="{{ url_for('static', filename='uploads/' + item['photo']) }}" target="_blank" title="Click to view full image in high resolution">
+                        <img src="{{ url_for('static', filename='uploads/' + item['photo']) }}"
+                             alt="{{ item['name'] }}" class="detail-img large-detail-img">
+                    </a>
+                    <span class="img-zoom-hint">🔍 Click image to zoom</span>
+                </div>
+                {% else %}
+                <div class="detail-placeholder large-placeholder">
+                    <span class="placeholder-icon">📦</span>
+                    <p class="placeholder-title">No Photograph Available</p>
+                    <p class="placeholder-sub">The student did not attach a photo for this report</p>
+                </div>
+                {% endif %}
+
+                <div class="detail-badge-strip">
+                    <span class="item-badge badge-{{ item['report_type'] }} detail-badge">
+                        {{ item['report_type']|title }} Item
+                    </span>
+                    <span class="item-status status-{{ item['status']|lower }}">
+                        ● {{ item['status'] }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Right: Item Specifications & Contextual Actions -->
+            <div class="detail-info">
+
+                <div class="detail-header">
+                    <h1 class="detail-title">{{ item['name'] }}</h1>
+                    <span class="item-category-tag">Category: {{ item['category'] }}</span>
+                </div>
+
+                <!-- Structured Metadata List -->
+                <div class="detail-meta-list">
+                    <div class="meta-item">
+                        <span class="meta-icon">📁</span>
+                        <div>
+                            <strong>Category</strong>
+                            <p>{{ item['category'] }}</p>
+                        </div>
+                    </div>
+
+                    <div class="meta-item">
+                        <span class="meta-icon">📍</span>
+                        <div>
+                            <strong>Campus Location</strong>
+                            <p>{{ item['location'] }}</p>
+                        </div>
+                    </div>
+
+                    <div class="meta-item">
+                        <span class="meta-icon">📅</span>
+                        <div>
+                            <strong>Date Reported</strong>
+                            <p>{{ item['item_date'] }}</p>
+                        </div>
+                    </div>
+
+                    <div class="meta-item">
+                        <span class="meta-icon">👤</span>
+                        <div>
+                            <strong>Reported By</strong>
+                            <p>{{ item['reporter_name'] or 'Campus Member' }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Full Description Box -->
+                <div class="detail-description-box">
+                    <h3>Item Description & Key Characteristics</h3>
+                    <p class="description-text">{{ item['description'] }}</p>
+                </div>
+
+                <!-- Contextual Action Section -->
+                <div class="detail-actions">
+                    {% if item['status'] == 'Resolved' %}
+                        <!-- Item is already marked as Resolved -->
+                        <div class="detail-status-card resolved-card">
+                            <div class="status-card-icon">✅</div>
+                            <div class="status-card-body">
+                                <h3>Case Resolved</h3>
+                                <p>This item has already been claimed by its owner or marked resolved. No further actions can be taken.</p>
+                            </div>
+                        </div>
+
+                    {% elif item['report_type'] == 'found' %}
+                        <!-- Found Item Branch -->
+                        {% if session.get('user_id') and (item['user_id'] == session.get('user_id') or item['email'].lower() == session.get('user_email', '').lower()) %}
+                            <!-- Current user is the finder / reporter -->
+                            <div class="detail-status-card owner-card">
+                                <div class="status-card-icon">📌</div>
+                                <div class="status-card-body">
+                                    <h3>You reported finding this item</h3>
+                                    <p>Incoming claims submitted by other students will appear in your dashboard for your review.</p>
+                                    <a href="/dashboard" class="btn found-btn mt-2">Open My Dashboard →</a>
+                                </div>
+                            </div>
+
+                        {% elif user_claim %}
+                            <!-- Current user has an existing claim -->
+                            <div class="detail-status-card claim-active-card">
+                                <div class="status-card-icon">
+                                    {% if user_claim['status'] == 'Approved' %}🎉
+                                    {% elif user_claim['status'] == 'Rejected' %}❌
+                                    {% else %}⏳
+                                    {% endif %}
+                                </div>
+                                <div class="status-card-body">
+                                    <h3>Your Claim Status: {{ user_claim['status'] }}</h3>
+                                    {% if user_claim['status'] == 'Pending' %}
+                                        <p>Your ownership claim was received and is currently under review by the finder or administration.</p>
+                                    {% elif user_claim['status'] == 'Approved' %}
+                                        <p>Your claim has been <strong>approved</strong>! Contact information has been exchanged.</p>
+                                    {% else %}
+                                        <p>Your claim was not approved for this item.</p>
+                                    {% endif %}
+                                    <a href="/dashboard" class="btn-link mt-2">View claim in Dashboard →</a>
+                                </div>
+                            </div>
+
+                        {% elif session.get('user_id') %}
+                            <!-- Logged in student, not reporter, hasn't claimed yet -->
+                            <div class="detail-claim-action-box">
+                                <div class="claim-prompt-text">
+                                    <h3>Are you the rightful owner?</h3>
+                                    <p>If this item belongs to you, submit a claim request with details to prove your ownership.</p>
+                                </div>
+                                <a href="{{ url_for('claim_item', item_id=item['id']) }}" class="btn lost-btn detail-claim-btn">
+                                    🙋 Claim This Item
+                                </a>
+                            </div>
+
+                        {% else %}
+                            <!-- Logged out visitor -->
+                            <div class="detail-login-prompt-box">
+                                <h3>Lost this item?</h3>
+                                <p>Please log in with your student account to submit an ownership claim request.</p>
+                                <a href="{{ url_for('login') }}?next={{ url_for('claim_item', item_id=item['id']) }}" class="btn lost-btn">
+                                    🔑 Log In to Claim Item
+                                </a>
+                            </div>
+                        {% endif %}
+
+                    {% else %}
+                        <!-- Lost Item Branch -->
+                        {% if session.get('user_id') and (item['user_id'] == session.get('user_id') or item['email'].lower() == session.get('user_email', '').lower()) %}
+                            <!-- Current user is the one who lost the item -->
+                            <div class="detail-status-card owner-card">
+                                <div class="status-card-icon">📌</div>
+                                <div class="status-card-body">
+                                    <h3>You reported this lost item</h3>
+                                    <p>We will alert you via notifications if a student or campus staff locates your item.</p>
+                                    <a href="/dashboard" class="btn lost-btn mt-2">Track in Dashboard →</a>
+                                </div>
+                            </div>
+
+                        {% elif session.get('user_id') %}
+                            <!-- Another student found this item -->
+                            <div class="lost-contact-box">
+                                <h3>Found this item on campus?</h3>
+                                <p>Help return it to {{ item['reporter_name'] or 'the student owner' }} by sending them an email:</p>
+                                <a href="mailto:{{ item['email'] }}?subject=Found%20your%20lost%20item:%20{{ item['name'] }}%20(CampusFind%20#{{ item['id'] }})"
+                                   class="btn lost-btn detail-contact-btn">
+                                    ✉ Send Email to Owner
+                                </a>
+                            </div>
+
+                        {% else %}
+                            <!-- Logged out visitor -->
+                            <div class="detail-login-prompt-box">
+                                <h3>Found this student's item?</h3>
+                                <p>Log in with your student account to contact the owner directly.</p>
+                                <a href="{{ url_for('login') }}?next={{ url_for('item_detail', item_id=item['id']) }}" class="btn lost-btn">
+                                    🔑 Log In to Contact Owner
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-brand">
+                <div class="logo">CampusFind.</div>
+                <p>A smarter way to find your lost belongings around your college campus.</p>
+            </div>
+
+            <div class="footer-links">
+                <div class="footer-links-col">
+                    <h4>Quick Links</h4>
+                    <a href="/">Home</a>
+                    <a href="/#categories">Categories</a>
+                    <a href="/#reports">Reports</a>
+                </div>
+                <div class="footer-links-col">
+                    <h4>Report</h4>
+                    <a href="/report/lost">Report Lost Item</a>
+                    <a href="/report/found">Report Found Item</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>&copy; 2026 CampusFind | Built for Students, By Students.</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

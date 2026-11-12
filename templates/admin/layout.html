@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin Console{% endblock %} | CampusFind</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="admin-app-body">
+
+    <!-- Admin Wrapper with Sidebar -->
+    <div class="admin-layout">
+
+        <!-- Sidebar Navigation -->
+        <aside class="admin-sidebar" id="adminSidebar">
+            <div class="sidebar-brand">
+                <span class="logo">CampusFind.</span>
+                <span class="admin-badge-pill">🛡️ Admin</span>
+            </div>
+
+            <div class="admin-user-profile">
+                <div class="admin-avatar">👤</div>
+                <div class="admin-user-info">
+                    <strong>{{ session.get('user_name', 'Administrator') }}</strong>
+                    <span>{{ session.get('user_email', 'admin@campus') }}</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-menu">
+                <a href="/admin/dashboard" class="sidebar-link {% if request.path == '/admin/dashboard' %}active{% endif %}">
+                    <span class="menu-icon">📊</span> Dashboard
+                </a>
+                <a href="/admin/items" class="sidebar-link {% if '/admin/items' in request.path %}active{% endif %}">
+                    <span class="menu-icon">📦</span> Manage Items
+                </a>
+                <a href="/admin/claims" class="sidebar-link {% if '/admin/claims' in request.path %}active{% endif %}">
+                    <span class="menu-icon">📑</span> Manage Claims
+                </a>
+                <a href="/admin/users" class="sidebar-link {% if '/admin/users' in request.path %}active{% endif %}">
+                    <span class="menu-icon">👥</span> Manage Students
+                </a>
+
+                <div class="sidebar-divider"></div>
+
+                <a href="/" target="_blank" class="sidebar-link portal-link">
+                    <span class="menu-icon">🌐</span> Public Portal ↗
+                </a>
+                <a href="/admin/logout" class="sidebar-link logout-link">
+                    <span class="menu-icon">🚪</span> Sign Out
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="admin-main-wrapper">
+
+            <!-- Admin Topbar -->
+            <header class="admin-topbar">
+                <button class="sidebar-toggle-btn" onclick="toggleAdminSidebar()" aria-label="Toggle Sidebar">
+                    ☰ Menu
+                </button>
+                <div class="topbar-crumb">
+                    <span>Campus Administration Console</span>
+                </div>
+                <div class="topbar-user-badge">
+                    <span class="role-badge role-admin">Verified Admin</span>
+                </div>
+            </header>
+
+            <main class="admin-content-area">
+
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                    <div class="flash-messages">
+                        {% for message in messages %}
+                            <div class="flash-msg">📢 {{ message }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+
+            </main>
+
+            <footer class="admin-footer-bar">
+                <p>&copy; 2026 CampusFind Security &amp; Administration | College Lost &amp; Found Portal</p>
+            </footer>
+
+        </div>
+
+    </div>
+
+    <script>
+        function toggleAdminSidebar() {
+            var sidebar = document.getElementById('adminSidebar');
+            if (sidebar) {
+                sidebar.classList.toggle('open');
+            }
+        }
+    </script>
+</body>
+</html>

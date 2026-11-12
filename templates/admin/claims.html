@@ -1,0 +1,118 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Manage Claims{% endblock %}
+
+{% block content %}
+<div class="admin-page-header">
+    <div>
+        <h1 class="admin-page-title">Manage Ownership Claims</h1>
+        <p class="admin-page-subtitle">Review ownership proofs submitted by students, resolve disputes, and approve returns.</p>
+    </div>
+</div>
+
+<!-- Claims Filter Bar -->
+<div class="admin-controls-card">
+    <form action="/admin/claims" method="GET" class="admin-filter-grid">
+        <div class="filter-field">
+            <label>Filter by Claim Status</label>
+            <select name="status" onchange="this.form.submit()">
+                <option value="">All Claims (Pending, Approved, Rejected)</option>
+                <option value="Pending" {% if filter_status == 'Pending' %}selected{% endif %}>⏳ Pending Only (Awaiting Review)</option>
+                <option value="Approved" {% if filter_status == 'Approved' %}selected{% endif %}>✔ Approved Claims</option>
+                <option value="Rejected" {% if filter_status == 'Rejected' %}selected{% endif %}>✖ Rejected Claims</option>
+            </select>
+        </div>
+
+        <div class="filter-buttons">
+            <button type="submit" class="btn lost-btn btn-sm">Filter</button>
+            {% if filter_status %}
+            <a href="/admin/claims" class="admin-clear-link">Show All</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Master Claims Table -->
+<div class="admin-card-panel">
+    <div class="panel-header-row">
+        <div>
+            <h3>All Submitted Claims ({{ claims|length }} claims)</h3>
+        </div>
+    </div>
+
+    {% if claims %}
+    <div class="table-responsive">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Claim ID</th>
+                    <th>Item Claimed</th>
+                    <th>Claimant Student</th>
+                    <th>Proof of Ownership</th>
+                    <th>Contact Info</th>
+                    <th>Status</th>
+                    <th>Admin Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for claim in claims %}
+                <tr>
+                    <td><strong>#{{ claim['id'] }}</strong></td>
+                    <td>
+                        <div class="item-inline-preview">
+                            {% if claim['item_photo'] %}
+                            <img src="{{ url_for('static', filename='uploads/' + claim['item_photo']) }}" alt="{{ claim['item_name'] }}" class="table-mini-thumb">
+                            {% else %}
+                            <div class="table-mini-placeholder">📦</div>
+                            {% endif %}
+                            <div>
+                                <strong>{{ claim['item_name'] }}</strong>
+                                <div class="table-sub">📍 {{ claim['item_location'] }}</div>
+                                <div class="table-sub">Found by: {{ claim['reporter_name'] or claim['reporter_email'] }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div><strong>{{ claim['claimant_name'] }}</strong></div>
+                        <div class="table-sub">{{ claim['claimant_email'] }}</div>
+                        <div class="table-sub">Submitted: {{ claim['created_at'][:10] }}</div>
+                    </td>
+                    <td>
+                        <div class="claim-proof-box">
+                            {{ claim['claim_reason'] }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="contact-pill">{{ claim['contact_info'] }}</div>
+                    </td>
+                    <td>
+                        <span class="claim-status status-{{ claim['status']|lower }}">
+                            {{ claim['status'] }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="admin-actions-cell">
+                            {% if claim['status'] == 'Pending' %}
+                            <form action="/admin/claims/{{ claim['id'] }}/approve" method="POST" style="display:inline;" onsubmit="return confirm('Approve claim #{{ claim['id'] }}? The item will be marked Resolved and conflicting pending claims will be rejected.');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <button type="submit" class="btn-action-sm btn-resolve-sm" title="Approve Claim">✔ Approve</button>
+                            </form>
+                            <form action="/admin/claims/{{ claim['id'] }}/reject" method="POST" style="display:inline;" onsubmit="return confirm('Reject claim #{{ claim['id'] }}?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <button type="submit" class="btn-action-sm btn-delete-sm" title="Reject Claim">✖ Reject</button>
+                            </form>
+                            {% else %}
+                            <span class="table-sub">Processed</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="admin-empty">No claim requests match the selected status.</p>
+    {% endif %}
+</div>
+{% endblock %}

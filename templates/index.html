@@ -1,0 +1,347 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CampusFind | Campus Lost &amp; Found</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
+          rel="stylesheet">
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <nav>
+        <div class="logo">CampusFind.</div>
+
+        <div class="menu-toggle" onclick="toggleMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="#categories">Categories</a>
+            <a href="#about">How It Works</a>
+            <a href="#reports">Reports</a>
+            {% if session.get('user_id') %}
+                <a href="/notifications" class="nav-bell-link" title="Notifications">
+                    🔔
+                    {% if unread_notifications_count and unread_notifications_count > 0 %}
+                    <span class="bell-badge">{{ unread_notifications_count }}</span>
+                    {% endif %}
+                </a>
+                {% if session.get('is_admin') %}
+                <a href="/admin/dashboard" class="nav-highlight">🛡️ Admin Portal</a>
+                {% endif %}
+            <a href="/dashboard">Dashboard</a>
+            <a href="/logout">Log Out</a>
+            {% else %}
+            <a href="/login">Log In</a>
+            <a href="/register">Register</a>
+            {% endif %}
+            <a href="/report/lost" class="btn lost-btn">Report Item</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+
+        <h1>Lost Something? <span>Find It Here.</span></h1>
+
+        <p>
+            The fastest way to find your lost belongings
+            on campus — report, search, and reconnect.
+        </p>
+
+        <form class="search-box" action="/" method="GET">
+            <input
+                type="text"
+                name="q"
+                placeholder="Search for wallet, phone, ID card..."
+                value="{{ search_query or '' }}"
+            >
+
+            <button type="submit">🔍 Search</button>
+        </form>
+
+        <div class="actions">
+            <a href="/report/lost" class="btn lost-btn">
+                Report Lost Item
+            </a>
+            <a href="/report/found" class="btn found-btn">
+                Report Found Item
+            </a>
+        </div>
+
+    </section>
+
+    <section class="container filter-section">
+
+        <h2 class="section-title">Filter Reports</h2>
+
+        <div class="filter-bar">
+
+            <div class="filter-group">
+                <span class="filter-label">Type:</span>
+                <a href="/?{% if search_query %}q={{ search_query }}&{% endif %}{% if filter_category %}category={{ filter_category }}{% endif %}"
+                   class="filter-btn {% if not filter_type %}active{% endif %}">All</a>
+                <a href="/?type=lost{% if search_query %}&q={{ search_query }}{% endif %}{% if filter_category %}&category={{ filter_category }}{% endif %}"
+                   class="filter-btn filter-lost {% if filter_type == 'lost' %}active{% endif %}">🔴 Lost</a>
+                <a href="/?type=found{% if search_query %}&q={{ search_query }}{% endif %}{% if filter_category %}&category={{ filter_category }}{% endif %}"
+                   class="filter-btn filter-found {% if filter_type == 'found' %}active{% endif %}">🟢 Found</a>
+            </div>
+
+            <div class="filter-group">
+                <span class="filter-label">Category:</span>
+                <a href="/?{% if search_query %}q={{ search_query }}&{% endif %}{% if filter_type %}type={{ filter_type }}{% endif %}"
+                   class="filter-btn {% if not filter_category %}active{% endif %}">All</a>
+                <a href="/?category=Electronics{% if search_query %}&q={{ search_query }}{% endif %}{% if filter_type %}&type={{ filter_type }}{% endif %}"
+                   class="filter-btn {% if filter_category == 'Electronics' %}active{% endif %}">📱 Electronics</a>
+                <a href="/?category=Bags{% if search_query %}&q={{ search_query }}{% endif %}{% if filter_type %}&type={{ filter_type }}{% endif %}"
+                   class="filter-btn {% if filter_category == 'Bags' %}active{% endif %}">🎒 Bags</a>
+                <a href="/?category=Wallets{% if search_query %}&q={{ search_query }}{% endif %}{% if filter_type %}&type={{ filter_type }}{% endif %}"
+                   class="filter-btn {% if filter_category == 'Wallets' %}active{% endif %}">👛 Wallets</a>
+                <a href="/?category=ID Cards{% if search_query %}&q={{ search_query }}{% endif %}{% if filter_type %}&type={{ filter_type }}{% endif %}"
+                   class="filter-btn {% if filter_category == 'ID Cards' %}active{% endif %}">🪪 ID Cards</a>
+                <a href="/?category=Books{% if search_query %}&q={{ search_query }}{% endif %}{% if filter_type %}&type={{ filter_type }}{% endif %}"
+                   class="filter-btn {% if filter_category == 'Books' %}active{% endif %}">📚 Books</a>
+                <a href="/?category=Other{% if search_query %}&q={{ search_query }}{% endif %}{% if filter_type %}&type={{ filter_type }}{% endif %}"
+                   class="filter-btn {% if filter_category == 'Other' %}active{% endif %}">🔑 Other</a>
+            </div>
+
+            {% if search_query or filter_type or filter_category %}
+            <div class="active-filters">
+                <span>Active filters:</span>
+                {% if search_query %}<span class="filter-tag">Search: "{{ search_query }}"</span>{% endif %}
+                {% if filter_type %}<span class="filter-tag">Type: {{ filter_type|title }}</span>{% endif %}
+                {% if filter_category %}<span class="filter-tag">Category: {{ filter_category }}</span>{% endif %}
+                <a href="/" class="clear-filters">✕ Clear all</a>
+            </div>
+            {% endif %}
+
+        </div>
+
+    </section>
+
+    <section class="container" id="categories">
+
+        <h2 class="section-title">Browse Categories</h2>
+
+        <div class="categories">
+
+            <a href="/?category=Electronics" class="category">
+                <div class="emoji">📱</div>
+                <h3>Electronics</h3>
+            </a>
+
+            <a href="/?category=Bags" class="category">
+                <div class="emoji">🎒</div>
+                <h3>Bags</h3>
+            </a>
+
+            <a href="/?category=Wallets" class="category">
+                <div class="emoji">👛</div>
+                <h3>Wallets</h3>
+            </a>
+
+            <a href="/?category=ID Cards" class="category">
+                <div class="emoji">🪪</div>
+                <h3>ID Cards</h3>
+            </a>
+
+            <a href="/?category=Books" class="category">
+                <div class="emoji">📚</div>
+                <h3>Books</h3>
+            </a>
+
+            <a href="/?category=Other" class="category">
+                <div class="emoji">🔑</div>
+                <h3>Other Items</h3>
+            </a>
+
+        </div>
+
+    </section>
+
+    <section class="container" id="about">
+
+        <h2 class="section-title">How CampusFind Works</h2>
+
+        <div class="info">
+
+            <div class="info-card">
+                <h3>01. Report</h3>
+                <p>
+                    Report your lost or found belongings
+                    with item details and photographs.
+                </p>
+            </div>
+
+            <div class="info-card">
+                <h3>02. Search</h3>
+                <p>
+                    Browse listings and find items
+                    reported by other students.
+                </p>
+            </div>
+
+            <div class="info-card">
+                <h3>03. Reconnect</h3>
+                <p>
+                    Submit a claim request and coordinate
+                    with the administrator to recover your item.
+                </p>
+            </div>
+
+        </div>
+
+    </section>
+
+<section class="container" id="reports">
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for message in messages %}
+                <div class="flash-msg">✅ {{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endwith %}
+
+    <h2 class="section-title">
+        {% if search_query or filter_type or filter_category %}
+            Search Results ({{ items|length }} found)
+        {% else %}
+            Recent Reports
+        {% endif %}
+    </h2>
+
+    <div class="items-grid">
+
+        {% for item in items %}
+
+        <div class="item-card">
+
+            <div class="item-card-image">
+                {% if item['photo'] %}
+                <img
+                    src="{{ url_for('static', filename='uploads/' + item['photo']) }}"
+                    alt="{{ item['name'] }}">
+                {% else %}
+                <div class="item-card-placeholder">📦</div>
+                {% endif %}
+
+                <span class="item-badge badge-{{ item['report_type'] }}">
+                    {{ item['report_type']|title }}
+                </span>
+            </div>
+
+            <div class="item-card-body">
+
+                <h3 class="item-card-title">{{ item['name'] }}</h3>
+
+                <p class="item-card-desc">
+                    {{ item['description'][:100] }}{% if item['description']|length > 100 %}…{% endif %}
+                </p>
+
+                <div class="item-card-meta">
+                    <span>📍 {{ item['location'] }}</span>
+                    <span>📅 {{ item['item_date'] }}</span>
+                    <span>📁 {{ item['category'] }}</span>
+                </div>
+
+                <div class="item-card-footer">
+                    <span class="item-status status-{{ item['status']|lower }}">
+                        {{ item['status'] }}
+                    </span>
+                    <div class="item-card-actions">
+                        <a href="{{ url_for('item_detail', item_id=item['id']) }}" class="item-detail-link">
+                            View Details
+                        </a>
+                        {% if item['report_type'] == 'found' and item['status'] == 'Open' %}
+                            {% if session.get('user_id') and (item['user_id'] == session.get('user_id') or item['email'].lower() == session.get('user_email', '').lower()) %}
+                                <span class="badge-own-item">Your Report</span>
+                            {% else %}
+                                <a href="{{ url_for('claim_item', item_id=item['id']) }}" class="btn-claim-mini">
+                                    Claim Item
+                                </a>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        {% else %}
+
+        <div class="items-empty">
+            <div class="items-empty-icon">🔍</div>
+            <p>
+                {% if search_query or filter_type or filter_category %}
+                    No items match your filters. Try adjusting your search or
+                    <a href="/">clear all filters</a>.
+                {% else %}
+                    No reports available yet. Be the first to report an item!
+                {% endif %}
+            </p>
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</section>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-brand">
+                <div class="logo">CampusFind.</div>
+                <p>A smarter way to find your lost belongings around your college campus.</p>
+            </div>
+
+            <div class="footer-links">
+                <div class="footer-links-col">
+                    <h4>Quick Links</h4>
+                    <a href="/">Home</a>
+                    <a href="#categories">Categories</a>
+                    <a href="#reports">Reports</a>
+                </div>
+                <div class="footer-links-col">
+                    <h4>Report</h4>
+                    <a href="/report/lost">Report Lost Item</a>
+                    <a href="/report/found">Report Found Item</a>
+                </div>
+                <div class="footer-links-col">
+                    <h4>Account</h4>
+                    {% if session.get('user_id') %}
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/logout">Log Out</a>
+                    {% else %}
+                    <a href="/login">Log In</a>
+                    <a href="/register">Register</a>
+                    {% endif %}
+                    <a href="/admin/login" style="margin-top:6px; color:#94a3b8; font-size:12px;">🛡️ Admin Login</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>&copy; 2026 CampusFind | Built for Students, By Students.</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+</body>
+</html>

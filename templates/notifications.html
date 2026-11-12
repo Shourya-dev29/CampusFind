@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Notifications | CampusFind</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <nav>
+        <div class="logo">CampusFind.</div>
+
+        <div class="menu-toggle" onclick="toggleMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="/notifications" class="nav-bell-link active" title="Notifications">
+                🔔
+                {% if unread_notifications_count and unread_notifications_count > 0 %}
+                <span class="bell-badge">{{ unread_notifications_count }}</span>
+                {% endif %}
+            </a>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/logout">Log Out</a>
+            <a href="/report/lost" class="btn lost-btn">Report Item</a>
+        </div>
+    </nav>
+
+    <section class="container notifications-container">
+
+        <!-- Page Header -->
+        <div class="notifications-header-box">
+            <div>
+                <a href="/dashboard" class="back-link">← Back to Dashboard</a>
+                <h1 class="page-title">Notifications</h1>
+                <p class="page-subtitle">Stay updated on your claims and reported items</p>
+            </div>
+
+            <div class="notif-header-actions">
+                {% if unread_notifications_count and unread_notifications_count > 0 %}
+                <form action="{{ url_for('mark_all_notifications_read') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="btn btn-secondary btn-sm">
+                        ✔ Mark All as Read
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div class="flash-messages">
+                {% for message in messages %}
+                    <div class="flash-msg">📢 {{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Notification List -->
+        <div class="notifications-list-card">
+            {% if notifications %}
+                <div class="notif-list">
+                    {% for n in notifications %}
+                    <div class="notif-item {% if not n['is_read'] %}notif-unread{% endif %}">
+                        <div class="notif-icon-col">
+                            <span class="notif-badge-icon type-{{ n['notification_type'] }}">
+                                {% if n['notification_type'] == 'claim_received' %}📥
+                                {% elif n['notification_type'] == 'claim_approved' %}✅
+                                {% elif n['notification_type'] == 'claim_rejected' %}❌
+                                {% elif n['notification_type'] == 'item_resolved' %}🎯
+                                {% else %}🔔
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <div class="notif-content-col">
+                            <div class="notif-top-row">
+                                <h3 class="notif-title">{{ n['title'] }}</h3>
+                                <span class="notif-time">{{ n['created_at'][:16] }}</span>
+                            </div>
+
+                            <p class="notif-message">{{ n['message'] }}</p>
+
+                            <div class="notif-meta-row">
+                                {% if n['related_item_id'] %}
+                                <a href="{{ url_for('item_detail', item_id=n['related_item_id']) }}" class="notif-item-link">
+                                    🔍 View Item Details {% if n['item_name'] %}({{ n['item_name'] }}){% endif %} →
+                                </a>
+                                {% endif %}
+
+                                {% if not n['is_read'] %}
+                                <span class="notif-status-badge">Unread</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="notif-action-col">
+                            {% if not n['is_read'] %}
+                            <form action="{{ url_for('mark_notification_read', notification_id=n['id']) }}" method="POST">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <button type="submit" class="btn-mark-read" title="Mark as Read">
+                                    ✓ Read
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="read-check" title="Read">✓</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-notif-state">
+                    <span class="empty-icon">🎉</span>
+                    <h3>You're all caught up!</h3>
+                    <p>No notifications at the moment. When someone claims an item you found, or an update occurs, you'll see it here.</p>
+                    <a href="/dashboard" class="btn found-btn mt-3">Go to Dashboard</a>
+                </div>
+            {% endif %}
+        </div>
+
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-brand">
+                <div class="footer-logo">CampusFind.</div>
+                <p>A smart, student-friendly platform connecting lost belongings with their rightful owners across campus.</p>
+            </div>
+
+            <div class="footer-links">
+                <div class="link-group">
+                    <h4>Quick Links</h4>
+                    <a href="/">Home</a>
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/notifications">Notifications</a>
+                    <a href="/report/lost">Report Lost</a>
+                    <a href="/report/found">Report Found</a>
+                </div>
+                <div class="link-group">
+                    <h4>Contact & Support</h4>
+                    <p>Campus Security Desk</p>
+                    <p>Student Affairs Office</p>
+                    <p>support@campusfind.edu</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>&copy; 2026 CampusFind. Built for campus safety and student community.</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
