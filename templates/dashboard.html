@@ -89,7 +89,9 @@
                     <div class="dash-notif-body">
                         <div class="dash-notif-header">
                             <strong class="dash-notif-title">{{ n['title'] }}</strong>
-                            <span class="notif-time">{{ n['created_at'][:16] }}</span>
+                          <span class="notif-time">
+                            {{ n['created_at'].strftime('%Y-%m-%d %H:%M') if n['created_at'] else '' }}
+                                </span>
                         </div>
                         <p class="dash-notif-text">{{ n['message'] }}</p>
                         {% if n['related_item_id'] %}
