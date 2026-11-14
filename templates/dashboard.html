@@ -194,7 +194,7 @@
 
                     <div class="my-claim-details">
                         <p><strong>Your proof provided:</strong> {{ claim['claim_reason'][:120] }}{% if claim['claim_reason']|length > 120 %}...{% endif %}</p>
-                        <p><strong>Submitted on:</strong> {{ claim['created_at'][:10] }}</p>
+                        <p><strong>Submitted on:</strong> {{ claim['created_at'] | string | truncate(10, True, '') }}</p>
                     </div>
 
                     <div class="my-claim-footer">
