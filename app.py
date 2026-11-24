@@ -152,7 +152,7 @@ def is_safe_url(target):
         return False
     target = target.strip()
     # Reject protocol-relative or backslash-tricked URLs
-    if target.startswith("//") or target.startswith("\\"):
+    if target.startswith("//") or "\\" in target or any(ord(c) < 32 for c in target):
         return False
     ref_url = urlparse(request.host_url)
     test_url = urlparse(urljoin(request.host_url, target))
@@ -338,7 +338,7 @@ def get_postgres_connection():
     else:
         conn_str = clean_url
 
-    raw_conn = psycopg2.connect(conn_str)
+    raw_conn = psycopg2.connect(conn_str, connect_timeout=10)
     return PostgresConnectionWrapper(raw_conn)
 
 
@@ -359,6 +359,8 @@ def apply_security_headers(response):
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if session.get("user_id") or request.path.startswith(("/admin", "/login", "/register", "/dashboard", "/notifications", "/claim", "/report")):
+        response.headers["Cache-Control"] = "private, no-store"
     return response
 
 
@@ -588,7 +590,9 @@ def init_db():
 try:
     init_db()
 except Exception:
-    pass
+    app.logger.exception("Database initialization failed")
+    if IS_PRODUCTION:
+        raise
 
 
 # -------------------------------------------------------------
@@ -599,7 +603,7 @@ except Exception:
 def uploaded_file(filename):
     """Serve user uploaded photos from local UPLOAD_FOLDER or generate signed URL for private Supabase Storage."""
     clean_name = secure_filename(filename)
-    if not clean_name:
+    if not clean_name or clean_name != filename:
         abort(404)
 
     # 1. Check whether the image exists in static/uploads/ (preserves existing images)
@@ -683,7 +687,7 @@ def login_required(view):
 
         # Live database check: account must exist and be active
         conn = get_db()
-        user = conn.execute("SELECT id, is_active FROM users WHERE id = ?", (user_id,)).fetchone()
+        user = conn.execute("SELECT id, is_active, is_admin FROM users WHERE id = ?", (user_id,)).fetchone()
         conn.close()
 
         if not user or user["is_active"] != 1:
@@ -691,6 +695,7 @@ def login_required(view):
             flash("Your account has been deactivated. Please contact campus administration.")
             return redirect(url_for("login"))
 
+        session["is_admin"] = user["is_admin"]
         return view(**kwargs)
     return wrapped_view
 
@@ -782,7 +787,7 @@ def item_detail(item_id):
         SELECT i.*, u.name as reporter_name
         FROM items i
         LEFT JOIN users u ON i.user_id = u.id
-        WHERE i.id = ?
+        WHERE i.id = ? AND COALESCE(i.is_archived, 0) = 0
     """, (item_id,)).fetchone()
 
     # Check if current user has already claimed this item
@@ -846,6 +851,14 @@ def report_item(report_type):
             flash("Please provide a valid email address (e.g. name@college.edu).")
             return redirect(url_for("report_item", report_type=report_type))
 
+        try:
+            parsed_date = date.fromisoformat(item_date)
+            if parsed_date > date.today():
+                raise ValueError("Future date")
+        except ValueError:
+            flash("Please enter a valid item date that is not in the future.")
+            return redirect(url_for("report_item", report_type=report_type))
+
         photo = request.files.get("photo")
         photo_name = None
 
@@ -885,12 +898,23 @@ def report_item(report_type):
                         flash("Image upload service is currently unavailable. Please try again later.")
                         return redirect(url_for("report_item", report_type=report_type))
             else:
+                if IS_PRODUCTION:
+                    flash("Image upload service is not configured.")
+                    return redirect(url_for("report_item", report_type=report_type))
                 photo.seek(0)
                 photo.save(os.path.join(UPLOAD_FOLDER, photo_name))
 
         user_id = session.get("user_id")
 
         conn = get_db()
+        if user_id:
+            account = conn.execute("SELECT email, is_active FROM users WHERE id = ?", (user_id,)).fetchone()
+            if not account or account["is_active"] != 1:
+                conn.close()
+                session.clear()
+                flash("Please log in again before submitting a report.")
+                return redirect(url_for("login"))
+            email = account["email"]
         conn.execute("""
             INSERT INTO items
             (name, category, report_type, description,
@@ -971,8 +995,7 @@ def register():
         )
         user_id = cursor.lastrowid
 
-        # Also associate any previously submitted items matching this email
-        conn.execute("UPDATE items SET user_id = ? WHERE email = ? AND user_id IS NULL", (user_id, email))
+        # Do not claim legacy reports by unverified email address.
 
         conn.commit()
         conn.close()
@@ -1066,9 +1089,9 @@ def dashboard():
     # 1. My reported items
     my_items = conn.execute("""
         SELECT * FROM items
-        WHERE (user_id = ? OR email = ?) AND (is_archived = 0 OR is_archived IS NULL)
+        WHERE user_id = ? AND (is_archived = 0 OR is_archived IS NULL)
         ORDER BY id DESC
-    """, (user_id, user_email)).fetchall()
+    """, (user_id,)).fetchall()
 
     # 2. My submitted claims
     my_claims = conn.execute("""
@@ -1094,9 +1117,9 @@ def dashboard():
         FROM claims c
         JOIN items i ON c.item_id = i.id
         JOIN users u ON c.claimant_id = u.id
-        WHERE (i.user_id = ? OR i.email = ?)
+        WHERE i.user_id = ?
         ORDER BY c.id DESC
-    """, (user_id, user_email)).fetchall()
+    """, (user_id,)).fetchall()
 
     # 4. Recent notifications for this user (Phase 5)
     recent_notifications = conn.execute("""
@@ -1180,6 +1203,11 @@ def claim_item(item_id):
     if item is None:
         conn.close()
         flash("Item not found.")
+        return redirect(url_for("home"))
+
+    if item["is_archived"] or item["status"] != "Open":
+        conn.close()
+        flash("This item is not open for claims.")
         return redirect(url_for("home"))
 
     if item["report_type"] != "found":
@@ -1277,9 +1305,14 @@ def handle_claim_action(claim_id, action):
         return redirect(url_for("dashboard"))
 
     # Only the owner/reporter of the item can approve or reject claims on it (unless admin)
-    if claim["item_user_id"] != user_id and claim["item_email"].lower() != user_email and not session.get("is_admin"):
+    if claim["item_user_id"] != user_id and not session.get("is_admin"):
         conn.close()
         flash("You are not authorized to manage claims for this item.")
+        return redirect(url_for("dashboard"))
+
+    if claim["status"] != "Pending":
+        conn.close()
+        flash("This claim has already been reviewed.")
         return redirect(url_for("dashboard"))
 
     new_status = "Approved" if action == "approve" else "Rejected"
@@ -1358,8 +1391,14 @@ def admin_root():
 @app.route("/admin/login", methods=["GET", "POST"])
 @limiter.limit("10 per minute; 30 per hour")
 def admin_login():
-    if session.get("is_admin"):
-        return redirect(url_for("admin_dashboard"))
+    if session.get("is_admin") and session.get("user_id"):
+        conn = get_db()
+        account = conn.execute("SELECT is_admin, is_active FROM users WHERE id = ?", (session["user_id"],)).fetchone()
+        conn.close()
+        if account and account["is_admin"] == 1 and account["is_active"] == 1:
+            return redirect(url_for("admin_dashboard"))
+        session.clear()
+        session["csrf_token"] = secrets.token_hex(16)
 
     next_url = request.args.get("next") or request.form.get("next")
 
@@ -1642,6 +1681,11 @@ def admin_claim_action(claim_id, action):
     if not claim:
         conn.close()
         flash("Claim not found.")
+        return redirect(url_for("admin_claims"))
+
+    if claim["status"] != "Pending":
+        conn.close()
+        flash("This claim has already been reviewed.")
         return redirect(url_for("admin_claims"))
 
     new_status = "Approved" if action == "approve" else "Rejected"
