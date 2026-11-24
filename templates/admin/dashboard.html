@@ -173,7 +173,7 @@
                             </td>
                             <td>
                                 <div>{{ claim['claimant_name'] }}</div>
-                                <div class="table-sub">{{ claim['created_at'][:10] }}</div>
+                                <div class="table-sub">{{ (claim['created_at'] | string)[:10] if claim['created_at'] else '' }}</div>
                             </td>
                             <td>
                                 <span class="claim-status status-{{ claim['status']|lower }}">
@@ -216,7 +216,7 @@
                             <td>
                                 <strong>{{ student['name'] }}</strong>
                                 <div class="table-sub">{{ student['email'] }}</div>
-                                <div class="table-sub">Registered: {{ student['created_at'][:10] }}</div>
+                                <div class="table-sub">Registered: {{ (student['created_at'] | string)[:10] if student['created_at'] else '' }}</div>
                             </td>
                             <td>
                                 {% if student['is_admin'] %}

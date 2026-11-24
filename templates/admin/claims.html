@@ -75,7 +75,7 @@
                     <td>
                         <div><strong>{{ claim['claimant_name'] }}</strong></div>
                         <div class="table-sub">{{ claim['claimant_email'] }}</div>
-                        <div class="table-sub">Submitted: {{ claim['created_at'][:10] }}</div>
+                        <div class="table-sub">Submitted: {{ (claim['created_at'] | string)[:10] if claim['created_at'] else '' }}</div>
                     </td>
                     <td>
                         <div class="claim-proof-box">

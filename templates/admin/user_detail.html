@@ -7,7 +7,7 @@
     <a href="/admin/users" class="admin-back-link">← Back to All Students</a>
     <div>
         <h1 class="admin-page-title">{{ user['name'] }}</h1>
-        <p class="admin-page-subtitle">College Email: <strong>{{ user['email'] }}</strong> | Member since {{ user['created_at'][:10] }}</p>
+        <p class="admin-page-subtitle">College Email: <strong>{{ user['email'] }}</strong> | Member since {{ (user['created_at'] | string)[:10] if user['created_at'] else '' }}</p>
     </div>
 </div>
 

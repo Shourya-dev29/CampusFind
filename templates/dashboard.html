@@ -90,7 +90,7 @@
                         <div class="dash-notif-header">
                             <strong class="dash-notif-title">{{ n['title'] }}</strong>
                           <span class="notif-time">
-                            {{ n['created_at'].strftime('%Y-%m-%d %H:%M') if n['created_at'] else '' }}
+                            {{ (n['created_at'] | string)[:16] if n['created_at'] else '' }}
                                 </span>
                         </div>
                         <p class="dash-notif-text">{{ n['message'] }}</p>
@@ -134,7 +134,7 @@
                                 Status: {{ claim['status'] }}
                             </span>
                         </div>
-                        <span class="claim-date">{{ claim['created_at'][:10] }}</span>
+                        <span class="claim-date">{{ (claim['created_at'] | string)[:10] if claim['created_at'] else '' }}</span>
                     </div>
 
                     <div class="claim-body">
@@ -194,7 +194,7 @@
 
                     <div class="my-claim-details">
                         <p><strong>Your proof provided:</strong> {{ claim['claim_reason'][:120] }}{% if claim['claim_reason']|length > 120 %}...{% endif %}</p>
-                        <p><strong>Submitted on:</strong> {{ claim['created_at'] | string | truncate(10, True, '') }}</p>
+                        <p><strong>Submitted on:</strong> {{ (claim['created_at'] | string)[:10] if claim['created_at'] else '' }}</p>
                     </div>
 
                     <div class="my-claim-footer">

@@ -89,7 +89,7 @@
                         <div class="notif-content-col">
                             <div class="notif-top-row">
                                 <h3 class="notif-title">{{ n['title'] }}</h3>
-                                <span class="notif-time">{{ n['created_at'][:16] }}</span>
+                                <span class="notif-time">{{ (n['created_at'] | string)[:16] if n['created_at'] else '' }}</span>
                             </div>
 
                             <p class="notif-message">{{ n['message'] }}</p>
